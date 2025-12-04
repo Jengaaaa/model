@@ -4,8 +4,16 @@ __pycache__/
 *.pyo
 *.pyd
 
+# VSCode
+.vscode/
+.idea/ 
+
 # Jupyter
 *.ipynb_checkpoints
+*.ipynb
+
+# Dataset
+Dataset/
 
 # Data
 *.csv
