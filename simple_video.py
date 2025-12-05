@@ -54,6 +54,19 @@ class SimpleVideoEncoder(nn.Module):
         2) fc로 256차원으로 축소
         3) TemporalAttention으로 프레임 중요도 학습 후 가중합
     - 출력: video_embedding (B, 256)
+    Inception-ResNet-V2와 같은 심층 컨볼루션 신경망(CNN)은 다음과 같이 특징을 계층적으로 추출합니다.
+
+저수준 특징 (Low-level Features):
+
+초기 레이어(Layer)에서는 이미지의 가장 기본적인 요소, 즉 가장자리(Edges), 선(Lines), 모서리(Corners), 색상 대비(Color Contrast) 등과 같은 국소적이고 일반적인 특징을 추출합니다.
+
+중수준 특징 (Mid-level Features):
+
+중간 레이어에서는 저수준 특징을 조합하여 텍스처(Texture), 패턴(Patterns), 간단한 기하학적 형태(Simple Geometric Shapes) 등과 같은 조금 더 복잡한 특징을 추출합니다. 예를 들어, 원, 사각형 또는 특정 방향의 줄무늬 등이 해당됩니다.
+
+고수준 특징 (High-level Features):
+
+깊은 레이어에서는 중수준 특징을 조합하여 **전체적인 객체의 부분(Object Parts)**이나 추상적인 개념을 나타내는 특징을 추출합니다. 예를 들어, 사람의 얼굴, 눈, 바퀴, 동물의 몸통 등 특정 객체와 관련된 복잡하고 **의미론적인 특징(Semantic Features)**을 포착합니다.
     """
     def __init__(self, model_name="inception_resnet_v2", out_dim=256):
         super().__init__()
