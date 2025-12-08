@@ -11,7 +11,7 @@ dataset:
 
 training:
   batch_size: 4
-  epochs: 3
+  epochs: 20
   learning_rate: 5e-5
   use_amp: true
 
