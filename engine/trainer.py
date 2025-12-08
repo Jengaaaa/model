@@ -70,8 +70,9 @@ def train() -> None:
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print("Device:", device)
 
-    epochs = CONFIG["training"]["epochs"]
-    learning_rate = CONFIG["training"]["learning_rate"]
+    epochs = int(CONFIG["training"]["epochs"])
+    # YAML에서 따옴표로 감싸면 문자열이 될 수 있으므로 float으로 강제 변환
+    learning_rate = float(CONFIG["training"]["learning_rate"])
     use_amp = CONFIG["training"].get("use_amp", True) and (device == "cuda")
 
     train_loader, dev_loader = _build_dataloaders()

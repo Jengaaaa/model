@@ -4,7 +4,7 @@ import torch
 from torch.utils.data import Dataset
 
 from configs.config import CONFIG
-from data.video_utils import load_video_frames
+from data.video_utils import load_video_frames, load_precomputed_frames
 from data.audio_utils import load_mfcc_chunks
 
 
@@ -57,11 +57,17 @@ class AVECDataset(Dataset):
 
         video_dir = os.path.join(self.base_path, "Video", self.mode, task)
         audio_dir = os.path.join(self.base_path, "Audio", self.mode, task)
+        frames_dir = os.path.join(self.base_path, "Frames", self.mode, task, prefix)
 
         vpath = os.path.join(video_dir, f"{prefix}_{task}_video.mp4")
         apath = os.path.join(audio_dir, f"{prefix}_{task}_audio.wav")
 
-        frames = load_video_frames(vpath)
+        # 1) precomputed 프레임이 있으면 우선 사용
+        if os.path.isdir(frames_dir):
+            frames = load_precomputed_frames(frames_dir)
+        else:
+            # 2) 아니면 비디오에서 직접 샘플링
+            frames = load_video_frames(vpath)
         mfcc_chunks = load_mfcc_chunks(apath)
 
         # Testing
