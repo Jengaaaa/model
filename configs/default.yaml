@@ -1,0 +1,46 @@
+dataset:
+  # AVEC2014 AudioVisual 데이터셋 루트 경로 (프로젝트 내 Dataset 폴더 기준 예시)
+  # 필요에 따라 실제 데이터 위치에 맞게 수정하세요.
+  base_path: "Dataset/AVEC2014_AudioVisual"
+  # 사용할 태스크 목록
+  tasks:
+    - "Freeform"
+    - "Northwind"
+  # DataLoader num_workers 값
+  num_workers: 0
+
+training:
+  batch_size: 4
+  epochs: 20
+  learning_rate: 5e-5
+  use_amp: true
+
+model:
+  # 비디오 인코더 백본 이름 (timm)
+  backbone: "inception_resnet_v2"
+  # 한 샘플당 사용할 프레임 수
+  num_frames: 8
+  # 체크포인트 저장 디렉토리 및 파일명
+  checkpoint_dir: "checkpoints"
+  checkpoint_name: "best_fusionnet.pth"
+
+audio:
+  sample_rate: 16000
+  n_mfcc: 40
+  chunk_len: 3000
+  hop_ratio: 1.0
+  n_mels: 128
+  fmax: 8000
+
+video:
+  target_size: 299
+
+inference:
+  # 우울 점수 해석 구간
+  depression_score_thresholds:
+    normal: 10
+    mild: 20
+    moderate: 30
+    severe: 40
+
+
