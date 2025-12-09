@@ -7,10 +7,10 @@ dataset:
     - "Freeform"
     - "Northwind"
   # DataLoader num_workers 값
-  num_workers: 8
+  num_workers: 0
 
 training:
-  batch_size: 4
+  batch_size: 1
   epochs: 20
   learning_rate: 5e-5
   use_amp: true

@@ -70,8 +70,8 @@ def train() -> None:
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print("Device:", device)
 
-    epochs = int(CONFIG["training"]["epochs"])
-    # YAML에서 따옴표로 감싸면 문자열이 될 수 있으므로 float으로 강제 변환
+    epochs = CONFIG["training"]["epochs"]
+    # config에서 문자열("5e-5")로 들어와도 항상 float 로 캐스팅
     learning_rate = float(CONFIG["training"]["learning_rate"])
     use_amp = CONFIG["training"].get("use_amp", True) and (device == "cuda")
 
@@ -114,9 +114,13 @@ def train() -> None:
             optimizer.zero_grad()
 
             with torch.cuda.amp.autocast(enabled=use_amp):
-                out = model(frames, mfcc).squeeze()
-                loss_mse = mse_loss(out, labels)
-                loss_p = pearson_loss(out, labels)
+                # 출력/라벨을 항상 1D 벡터 형태로 맞춰서
+                # batch_size=1일 때도 스칼라로 squeeze 되지 않도록 한다.
+                out = model(frames, mfcc).view(-1)
+                labels_vec = labels.view(-1)
+
+                loss_mse = mse_loss(out, labels_vec)
+                loss_p = pearson_loss(out, labels_vec)
                 loss = loss_mse + 0.2 * loss_p
 
             scaler.scale(loss).backward()
@@ -124,8 +128,9 @@ def train() -> None:
             scaler.update()
 
             train_losses.append(loss.item())
-            train_preds.extend(out.detach().cpu().numpy())
-            train_gts.extend(labels.detach().cpu().numpy())
+            # numpy로 변환 후 리스트로 풀어서 extend
+            train_preds.extend(out.detach().cpu().numpy().tolist())
+            train_gts.extend(labels_vec.detach().cpu().numpy().tolist())
 
             loop.set_postfix(loss=loss.item())
 
@@ -151,17 +156,44 @@ def train() -> None:
                 labels = labels.to(device)
 
                 with torch.cuda.amp.autocast(enabled=use_amp):
-                    out = model(frames, mfcc).squeeze()
+                    out = model(frames, mfcc).view(-1)
+                    labels_vec = labels.view(-1)
 
-                val_preds.extend(out.detach().cpu().numpy())
-                val_gts.extend(labels.detach().cpu().numpy())
+                val_preds.extend(out.detach().cpu().numpy().tolist())
+                val_gts.extend(labels_vec.detach().cpu().numpy().tolist())
 
-        val_preds_arr = np.array(val_preds)
-        val_gts_arr = np.array(val_gts)
+        # numpy 배열로 변환 (float)
+        val_preds_arr = np.array(val_preds, dtype=float)
+        val_gts_arr = np.array(val_gts, dtype=float)
 
-        val_rmse = np.sqrt(np.mean((val_preds_arr - val_gts_arr) ** 2))
-        val_mae = np.mean(np.abs(val_preds_arr - val_gts_arr))
-        val_corr = pearsonr(val_preds_arr, val_gts_arr)[0]
+        # NaN/inf 값 제거 후에만 메트릭 계산
+        mask = np.isfinite(val_preds_arr) & np.isfinite(val_gts_arr)
+        n_total = val_preds_arr.shape[0]
+        n_valid = int(mask.sum())
+
+        if n_valid == 0:
+            print(
+                "\n[Warning] Validation contains no finite values "
+                f"(all NaN/inf). total={n_total}"
+            )
+            val_rmse = float("nan")
+            val_mae = float("nan")
+            val_corr = float("nan")
+        else:
+            # 일부 샘플이 NaN/inf 라서 걸러지더라도
+            # 조용히(mask만 적용) 진행하고 추가 로그는 출력하지 않는다.
+            vp = val_preds_arr[mask]
+            vg = val_gts_arr[mask]
+
+            val_rmse = np.sqrt(np.mean((vp - vg) ** 2))
+            val_mae = np.mean(np.abs(vp - vg))
+
+            # 상수 배열이면 pearsonr 가 nan을 줄 수 있으므로 방어적으로 처리
+            try:
+                val_corr = pearsonr(vp, vg)[0]
+            except Exception as e:
+                print(f"[Warning] pearsonr failed on validation data: {e}")
+                val_corr = float("nan")
 
         print(
             f"\n[Epoch {epoch}] "
@@ -175,6 +207,6 @@ def train() -> None:
             torch.save(model.state_dict(), ckpt_path)
             print(f"✅ Best model updated! (Val RMSE={val_rmse:.3f})")
 
-    print("\n🎉 Training Finished!")
+    print("\n Training Finished!")
     print(f"Best model saved to: {ckpt_path}")
 
